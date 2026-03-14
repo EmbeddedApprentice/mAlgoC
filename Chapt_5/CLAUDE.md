@@ -4,46 +4,50 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Context
 
-This is a C study project implementing data structures from *Mastering Algorithms with C* (Kyle Loudon, O'Reilly). Chapter 5 covers singly linked lists.
+C study project implementing data structures from *Mastering Algorithms with C* (Kyle Loudon, O'Reilly). Chapter 5 covers linked lists: singly-linked (`list/`) and doubly-linked (`dlist/`, in progress).
 
-## Structure
+## Build & Test
 
-```
-list/
-  inc/list.h   — struct definitions and macro-based accessors
-  src/list.c   — function implementations
-```
-
-No build system or test harness exists yet. Compile manually with gcc:
+Uses **CppUTest** (detected via `pkg-config`) and a recursive-include makefile pattern.
 
 ```sh
-gcc -I list/inc -c list/src/list.c -o list.o
+make          # build and run all tests with -v
+make clean    # remove objs/ and test binary
 ```
 
-## API Overview
+Tests live in `tests/` as `.cpp` files; C sources compile as C, linked by `g++`.
 
-**Structures:**
-- `ListElmt` — node holding a `void *data` pointer and `*next` link
-- `List` — container holding `size`, function pointers (`match`, `destroy`), and `head`/`tail` pointers
+To run a single test group, the test binary accepts CppUTest arguments:
+```sh
+./Chapt_5_tests -g SList -v
+```
 
-**Functions:**
-- `list_init(list, destroy)` — initializes a list; `destroy` may be NULL
-- `list_destroy(list)` — removes all elements, calling `destroy` on each data pointer
-- `list_insert_next(list, element, data)` — inserts after `element`; pass NULL to insert at head
-- `list_rem_next(list, element, data)` — removes element after `element`; pass NULL to remove head
+## Module System
 
-**Macros:** `list_size`, `list_head`, `list_tail`, `list_is_head`, `list_is_tail`, `list_data`, `list_next`
+Each module registers itself by appending to `SRC_DIRS` and `INCLUDE_DIRS` in its own `.mk` file, which the top-level `makefile` includes:
 
-## Known Bugs in Current Code
+```
+list/list.mk   → SRC_DIRS += list/src  |  INCLUDE_DIRS += list/inc
+dlist/dlist.mk → SRC_DIRS += dlist/src |  INCLUDE_DIRS += dlist/inc
+```
 
-The files contain several bugs (likely transcription errors from the book):
+`INC_FLAGS` is derived automatically from `SRC_DIRS` via the `%/src=%/inc` substitution, so the `INCLUDE_DIRS` entries in module `.mk` files are redundant but harmless. To add a new module, create a `.mk` file and `include` it in `makefile`.
 
-- `list.h`: include guard uses `#ifdef` instead of `#ifndef`
-- `list.h`: `match` parameter has typo `conts` instead of `const`
-- `list.h` / `list.c`: `list_init` parameter typed as `Lust *` instead of `List *`
-- `list.c`: `list_init` assigns to `list->detroy` (missing 's')
-- `list.c`: `list_destroy` has misplaced parenthesis in `list_rem_next` call
-- `list.c`: `list_insert_next` uses `listElmt` (wrong case) in `malloc` sizeof
-- `list.c`: `list_insert_next` does `list->size--` instead of `list->size++`
-- `list.c`: `list_remove_next` is misnamed — header declares it as `list_rem_next`
-- `list.c`: `list_remove_next` parameter `data` typed as `const void *` but dereferenced as `void **`
+## API — Singly-Linked List (`list/`)
+
+- `ListElmt` — node: `void *data`, `*next`
+- `List` — container: `size`, `match`, `destroy`, `head`/`tail`
+- `list_init(list, destroy)` — `destroy` may be NULL
+- `list_destroy(list)` — drains list, calls `destroy` on each data ptr
+- `list_insert_next(list, element, data)` — NULL element → insert at head
+- `list_rem_next(list, element, data)` — NULL element → remove head; returns -1 on error
+- Macros: `list_size`, `list_head`, `list_tail`, `list_is_head`, `list_is_tail`, `list_data`, `list_next`
+
+## API — Doubly-Linked List (`dlist/`)
+
+Mirrors the singly-linked API with `dlist_` prefix. `dListElmt` adds a `*prev` pointer.
+
+- `dlist_init`, `dlist_destroy`, `dlist_insert_next`, `dlist_rem_next` — same semantics as list counterparts
+- Macros: `dlist_size`, `dlist_head`, `dlist_tail`, `dlist_is_head`, `dlist_is_tail`, `dlist_data`, `dlist_next`, `dlist_prev`
+
+Tests in `tests/DListTest.cpp` (group `DList`) include `prev`-pointer correctness tests.

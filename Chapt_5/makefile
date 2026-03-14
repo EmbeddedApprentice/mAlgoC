@@ -5,6 +5,7 @@ SRC_DIRS     =
 INCLUDE_DIRS = tests
 
 include list/list.mk
+include dlist/dlist.mk
 # include future_module/future_module.mk
 
 # ── Toolchain ────────────────────────────────────────────────────────────────
@@ -36,10 +37,19 @@ ALL_OBJS   := $(SRC_OBJS) $(TEST_OBJS)
 TARGET = $(COMPONENT_NAME)_tests
 
 # ── Rules ─────────────────────────────────────────────────────────────────────
-.PHONY: all clean
+.PHONY: all tests test_link test_dlink clean
 
 all: $(TARGET)
 	./$(TARGET) -v
+
+tests: $(TARGET)
+	./$(TARGET) -v
+
+test_link: $(TARGET)
+	./$(TARGET) -g SList -v
+
+test_dlink: $(TARGET)
+	./$(TARGET) -g DList -v
 
 $(TARGET): $(ALL_OBJS)
 	$(LD) $^ $(CPPUTEST_LDFLAGS) -o $@

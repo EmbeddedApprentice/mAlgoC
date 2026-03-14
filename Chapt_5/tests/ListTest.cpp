@@ -12,7 +12,7 @@ static void countingDestroy(void *data) {
     destroyCallCount++;
 }
 
-TEST_GROUP(LinkedList) {
+TEST_GROUP(SList) {
     List list;
 
     void setup() {
@@ -49,71 +49,71 @@ static void insertRemoveN(int n) {
     list_destroy(&l);
 }
 
-TEST(LinkedList, InsertRemove100) {
+TEST(SList, InsertRemove100) {
     insertRemoveN(100);
 }
 
-TEST(LinkedList, InsertRemove1000) {
+TEST(SList, InsertRemove1000) {
     insertRemoveN(1000);
 }
 
-TEST(LinkedList, InsertRemove10000) {
+TEST(SList, InsertRemove10000) {
     insertRemoveN(10000);
 }
 
-TEST(LinkedList, InsertRemove100000) {
+TEST(SList, InsertRemove100000) {
     insertRemoveN(100000);
 }
 
 /* ── Unit tests ──────────────────────────────────────────────────────────── */
 
-TEST(LinkedList, InitializesToSizeZero) {
+TEST(SList, InitializesToSizeZero) {
     LONGS_EQUAL(0, list_size(&list));
 }
 
-TEST(LinkedList, InitHeadAndTailAreNull) {
+TEST(SList, InitHeadAndTailAreNull) {
     POINTERS_EQUAL(NULL, list_head(&list));
     POINTERS_EQUAL(NULL, list_tail(&list));
 }
 
-TEST(LinkedList, InsertAtHeadIncreasesSize) {
+TEST(SList, InsertAtHeadIncreasesSize) {
     int val = 42;
     list_insert_next(&list, NULL, &val);
     LONGS_EQUAL(1, list_size(&list));
 }
 
-TEST(LinkedList, InsertAtHeadSetsHead) {
+TEST(SList, InsertAtHeadSetsHead) {
     int val = 42;
     list_insert_next(&list, NULL, &val);
     POINTERS_EQUAL(&val, list_data(list_head(&list)));
 }
 
-TEST(LinkedList, InsertAtHeadOnEmptySetsTail) {
+TEST(SList, InsertAtHeadOnEmptySetsTail) {
     int val = 42;
     list_insert_next(&list, NULL, &val);
     POINTERS_EQUAL(&val, list_data(list_tail(&list)));
 }
 
-TEST(LinkedList, InsertAfterElementIncreasesSize) {
+TEST(SList, InsertAfterElementIncreasesSize) {
     int a = 1, b = 2;
     list_insert_next(&list, NULL, &a);
     list_insert_next(&list, list_head(&list), &b);
     LONGS_EQUAL(2, list_size(&list));
 }
 
-TEST(LinkedList, InsertAfterTailUpdatesTail) {
+TEST(SList, InsertAfterTailUpdatesTail) {
     int a = 1, b = 2;
     list_insert_next(&list, NULL, &a);
     list_insert_next(&list, list_head(&list), &b);
     POINTERS_EQUAL(&b, list_data(list_tail(&list)));
 }
 
-TEST(LinkedList, RemoveFromEmptyListReturnsError) {
+TEST(SList, RemoveFromEmptyListReturnsError) {
     void *data;
     LONGS_EQUAL(-1, list_rem_next(&list, NULL, &data));
 }
 
-TEST(LinkedList, RemoveFromHeadDecreasesSize) {
+TEST(SList, RemoveFromHeadDecreasesSize) {
     int val = 1;
     void *data;
     list_insert_next(&list, NULL, &val);
@@ -121,7 +121,7 @@ TEST(LinkedList, RemoveFromHeadDecreasesSize) {
     LONGS_EQUAL(0, list_size(&list));
 }
 
-TEST(LinkedList, RemoveFromHeadReturnsData) {
+TEST(SList, RemoveFromHeadReturnsData) {
     int val = 99;
     void *data;
     list_insert_next(&list, NULL, &val);
@@ -129,7 +129,7 @@ TEST(LinkedList, RemoveFromHeadReturnsData) {
     POINTERS_EQUAL(&val, data);
 }
 
-TEST(LinkedList, RemoveFromHeadClearsHeadTailOnLastElement) {
+TEST(SList, RemoveFromHeadClearsHeadTailOnLastElement) {
     int val = 1;
     void *data;
     list_insert_next(&list, NULL, &val);
@@ -138,7 +138,7 @@ TEST(LinkedList, RemoveFromHeadClearsHeadTailOnLastElement) {
     POINTERS_EQUAL(NULL, list_tail(&list));
 }
 
-TEST(LinkedList, RemoveAfterElementUpdatesNext) {
+TEST(SList, RemoveAfterElementUpdatesNext) {
     int a = 1, b = 2, c = 3;
     void *data;
     list_insert_next(&list, NULL, &c);
@@ -151,7 +151,7 @@ TEST(LinkedList, RemoveAfterElementUpdatesNext) {
     POINTERS_EQUAL(&c, list_data(list_next(list_head(&list))));
 }
 
-TEST(LinkedList, DestroyCallsUserDestroyFn) {
+TEST(SList, DestroyCallsUserDestroyFn) {
     destroyCallCount = 0;
     List dlist;
     list_init(&dlist, countingDestroy);
@@ -162,16 +162,16 @@ TEST(LinkedList, DestroyCallsUserDestroyFn) {
     LONGS_EQUAL(2, destroyCallCount);
 }
 
-TEST(LinkedList, InsertNextNullListReturnsError) {
+TEST(SList, InsertNextNullListReturnsError) {
     int val = 1;
     LONGS_EQUAL(-1, list_insert_next(NULL, NULL, &val));
 }
 
-TEST(LinkedList, RemoveNextNullListReturnsError) {
+TEST(SList, RemoveNextNullListReturnsError) {
     void *data;
     LONGS_EQUAL(-1, list_rem_next(NULL, NULL, &data));
 }
 
-TEST(LinkedList, SizeOfNullListIsZero) {
+TEST(SList, SizeOfNullListIsZero) {
     LONGS_EQUAL(0, list_size(NULL));
 }
