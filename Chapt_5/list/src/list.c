@@ -12,6 +12,23 @@
 
 /******************************************************************************
 *                                                                             *
+* Default allocator wrappers (system malloc / free).                         *
+*                                                                             *
+******************************************************************************/
+
+static void *default_alloc(void *ctx) {
+  (void)ctx;
+  return malloc(sizeof(ListElmt));
+}
+
+static void default_free(void *ctx, void *elmt) {
+  (void)ctx;
+  free(elmt);
+}
+
+
+/******************************************************************************
+*                                                                             *
 * ------------------------------ list_init ---------------------------------- *
 *                                                                             *
 ******************************************************************************/
@@ -22,10 +39,35 @@ void list_init(List *list, void (*destroy)(void *data)){
   list->destroy = destroy;
   list->head = NULL;
   list->tail = NULL;
+  list->match = NULL;
+
+  list->allocator_ctx = NULL;
+  list->elem_alloc    = default_alloc;
+  list->elem_free     = default_free;
 
   return;
 
 }
+
+
+/******************************************************************************
+*                                                                             *
+* ----------------------- list_init_with_allocator -------------------------- *
+*                                                                             *
+******************************************************************************/
+void list_init_with_allocator(List *list, void (*destroy)(void *data),
+                              void *ctx,
+                              void *(*alloc_fn)(void *ctx),
+                              void  (*free_fn)(void *ctx, void *elmt)) {
+
+  list_init(list, destroy);
+
+  list->allocator_ctx = ctx;
+  list->elem_alloc    = alloc_fn;
+  list->elem_free     = free_fn;
+
+}
+
 
 /******************************************************************************
 *                                                                             *
@@ -67,7 +109,7 @@ int list_insert_next(List *list, ListElmt *element, const void *data){
 
   /* Allocate storage for the element */
 
-  if ((new_element = (ListElmt *)malloc (sizeof(ListElmt))) == NULL){
+  if ((new_element = (ListElmt *)list->elem_alloc(list->allocator_ctx)) == NULL){
     return -1;
   }
 
@@ -150,12 +192,76 @@ int list_rem_next(List *list, ListElmt *element, void **data) {
 
   }
 
-  free(old_element);
+  list->elem_free(list->allocator_ctx, old_element);
 
   /* Adjust the size of the list */
   list->size--;
 
   return 0;
 
+
+}
+
+
+/******************************************************************************
+*                                                                             *
+* ========================== ListElmtPool =================================== *
+*                                                                             *
+******************************************************************************/
+
+
+/******************************************************************************
+*                                                                             *
+* ----------------------- list_elmt_pool_init ------------------------------- *
+*                                                                             *
+******************************************************************************/
+void list_elmt_pool_init(ListElmtPool *pool) {
+
+  /* Walk storage in reverse so storage[0] ends up at the head. */
+
+  pool->free_list = NULL;
+
+  for (int i = LIST_ELMT_POOL_CAPACITY - 1; i >= 0; i--) {
+    pool->storage[i].next = pool->free_list;
+    pool->free_list = &pool->storage[i];
+  }
+
+}
+
+
+/******************************************************************************
+*                                                                             *
+* ----------------------- list_elmt_pool_alloc ------------------------------ *
+*                                                                             *
+******************************************************************************/
+void *list_elmt_pool_alloc(void *ctx) {
+
+  ListElmtPool *pool = (ListElmtPool *)ctx;
+
+  if (pool->free_list == NULL) {
+    return NULL;
+  }
+
+  ListElmt *elmt  = pool->free_list;
+  pool->free_list = elmt->next;
+  elmt->next      = NULL;
+
+  return elmt;
+
+}
+
+
+/******************************************************************************
+*                                                                             *
+* ----------------------- list_elmt_pool_free ------------------------------- *
+*                                                                             *
+******************************************************************************/
+void list_elmt_pool_free(void *ctx, void *elmt) {
+
+  ListElmtPool *pool  = (ListElmtPool *)ctx;
+  ListElmt     *node  = (ListElmt *)elmt;
+
+  node->next      = pool->free_list;
+  pool->free_list = node;
 
 }

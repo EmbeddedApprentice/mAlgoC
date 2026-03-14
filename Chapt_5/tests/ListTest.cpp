@@ -175,3 +175,77 @@ TEST(SList, RemoveNextNullListReturnsError) {
 TEST(SList, SizeOfNullListIsZero) {
     LONGS_EQUAL(0, list_size(NULL));
 }
+
+/* ── Pool-backed list tests ───────────────────────────────────────────────── */
+
+TEST(SList, PoolBackedInsertAndRemove) {
+    ListElmtPool pool;
+    list_elmt_pool_init(&pool);
+
+    List pl;
+    list_init_with_allocator(&pl, NULL, &pool,
+                             list_elmt_pool_alloc, list_elmt_pool_free);
+    int val = 7;
+    LONGS_EQUAL(0, list_insert_next(&pl, NULL, &val));
+    LONGS_EQUAL(1, list_size(&pl));
+
+    void *data;
+    LONGS_EQUAL(0, list_rem_next(&pl, NULL, &data));
+    POINTERS_EQUAL(&val, data);
+    LONGS_EQUAL(0, list_size(&pl));
+    list_destroy(&pl);
+}
+
+TEST(SList, PoolBackedNodeIsWithinPoolStorage) {
+    ListElmtPool pool;
+    list_elmt_pool_init(&pool);
+
+    List pl;
+    list_init_with_allocator(&pl, NULL, &pool,
+                             list_elmt_pool_alloc, list_elmt_pool_free);
+    int val = 1;
+    list_insert_next(&pl, NULL, &val);
+
+    ListElmt *node = list_head(&pl);
+    CHECK(node >= &pool.storage[0]);
+    CHECK(node <= &pool.storage[LIST_ELMT_POOL_CAPACITY - 1]);
+    list_destroy(&pl);
+}
+
+TEST(SList, PoolBackedFreeReturnsNodeToPool) {
+    ListElmtPool pool;
+    list_elmt_pool_init(&pool);
+
+    /* Consume one node */
+    ListElmt *first = (ListElmt *)list_elmt_pool_alloc(&pool);
+
+    /* Return it */
+    list_elmt_pool_free(&pool, first);
+
+    /* Next alloc must get the same node back (LIFO). */
+    ListElmt *second = (ListElmt *)list_elmt_pool_alloc(&pool);
+    POINTERS_EQUAL(first, second);
+
+    list_elmt_pool_free(&pool, second);
+}
+
+TEST(SList, PoolBackedExhaustedReturnsMinusOne) {
+    ListElmtPool pool;
+    list_elmt_pool_init(&pool);
+
+    List pl;
+    list_init_with_allocator(&pl, NULL, &pool,
+                             list_elmt_pool_alloc, list_elmt_pool_free);
+
+    int vals[LIST_ELMT_POOL_CAPACITY];
+    for (int i = 0; i < LIST_ELMT_POOL_CAPACITY; i++) {
+        vals[i] = i;
+        LONGS_EQUAL(0, list_insert_next(&pl, NULL, &vals[i]));
+    }
+
+    /* Pool is empty — next insert must fail. */
+    int extra = 99;
+    LONGS_EQUAL(-1, list_insert_next(&pl, NULL, &extra));
+
+    list_destroy(&pl);
+}
