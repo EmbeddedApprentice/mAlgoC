@@ -16,6 +16,7 @@ make tests        # same as all
 make test_link    # run only singly-linked list tests (group SList)
 make test_dlink   # run only doubly-linked list tests (group DList)
 make test_bufpool # run only buffer pool tests (group BPool)
+make test_clist   # run only circular list tests (group CList)
 make clean        # remove objs/ and test binary
 ```
 
@@ -58,10 +59,11 @@ Reuses each `ListElmt`'s own `next` pointer as the free-list link (same embedded
 
 ## API — Doubly-Linked List (`dlist/`)
 
-Mirrors the singly-linked API with `dlist_` prefix. `dListElmt` adds a `*prev` pointer.
+Mirrors the singly-linked API with `dlist_` prefix. `dListElmt` adds a `*prev` pointer. Note: type names use a lowercase `d` prefix (`dList`, `dListElmt`), unlike the uppercase convention used elsewhere.
 
 - `dlist_init`, `dlist_destroy`, `dlist_insert_next`, `dlist_rem_next` — same semantics as list counterparts
 - Macros: `dlist_size`, `dlist_head`, `dlist_tail`, `dlist_is_head`, `dlist_is_tail`, `dlist_data`, `dlist_next`, `dlist_prev`
+- **No pluggable allocator** — calls `malloc`/`free` directly (unlike `list/`, which has `list_init_with_allocator`)
 
 Tests in `tests/DListTest.cpp` (group `DList`) include `prev`-pointer correctness tests.
 
@@ -76,3 +78,13 @@ Zero-heap, statically-allocated buffer pool. All memory lives in a `BufferPool` 
 - `buffer_pool_free_count(pool)` / `buffer_pool_min_free(pool)` — instrumentation
 
 Zero-heap guarantee: `AllocResultIsWithinStorageArray` test confirms every returned pointer falls within `pool.storage[]`.
+
+## Module — Circular Singly-Linked List (`clist/`)
+
+Circular list with a pluggable node allocator (same `elem_alloc`/`elem_free`/`allocator_ctx` pattern as `list/`). No tail pointer — `head->next` of the last element wraps back to `head`.
+
+- `clist_init(list, destroy)` / `clist_init_with_allocator(list, destroy, ctx, alloc_fn, free_fn)`
+- `clist_insert_next(list, element, data)` — `element` must be NULL only when the list is empty; passing NULL on a non-empty list returns -1
+- `clist_rem_next(list, element, data)` — `element == NULL` removes the head (O(n) traversal to re-link the tail); `element != NULL` removes `element->next` (O(1))
+- Macros: `clist_head`, `clist_is_head`, `clist_data`, `clist_next`
+- No element pool — uses system malloc/free by default or an injected allocator

@@ -7,7 +7,7 @@ INCLUDE_DIRS = tests
 include list/list.mk
 include dlist/dlist.mk
 include buffer_pool/buffer_pool.mk
-# include future_module/future_module.mk
+include clist/clist.mk
 
 # ── Toolchain ────────────────────────────────────────────────────────────────
 CC   = gcc
@@ -38,7 +38,7 @@ ALL_OBJS   := $(SRC_OBJS) $(TEST_OBJS)
 TARGET = $(COMPONENT_NAME)_tests
 
 # ── Rules ─────────────────────────────────────────────────────────────────────
-.PHONY: all tests test_link test_dlink test_bufpool clean
+.PHONY: all tests test_link test_dlink test_bufpool test_clist clean
 
 all: $(TARGET)
 	./$(TARGET) -v
@@ -54,6 +54,9 @@ test_dlink: $(TARGET)
 
 test_bufpool: $(TARGET)
 	./$(TARGET) -g BPool -v
+
+test_clist: $(TARGET)
+	./$(TARGET) -g CList -v
 
 $(TARGET): $(ALL_OBJS)
 	$(LD) $^ $(CPPUTEST_LDFLAGS) -o $@
